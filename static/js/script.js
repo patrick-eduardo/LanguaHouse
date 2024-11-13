@@ -19,8 +19,6 @@ function validateLogin(event) {
         // Caso contrário, a mensagem de erro é escondida
         errorMessage.style.display = "none";
         
-        // Aqui você pode adicionar qualquer lógica de login (como chamar a API ou verificar no servidor)
-        
         // Exemplo de sucesso:
         alert("Login realizado com sucesso!");
 

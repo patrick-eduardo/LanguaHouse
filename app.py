@@ -23,7 +23,7 @@ app.secret_key = '9b4e5417c43ff5c1d2168b1677b1957e'
 def index():
     return render_template('index.html')
 
-#Cadastro
+# Cadastro
 @app.route('/usuarios/', methods=['GET', 'POST'])
 def create():
     if request.method == 'POST':
@@ -46,7 +46,7 @@ def create():
         mysql.connection.commit()
         cur.close()
 
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
     
     return render_template('usuarios/create.html')
 
@@ -67,8 +67,8 @@ def login():
         # Verificar se o usuário existe e se a senha é correta
         if user and check_password_hash(user['senha'], password):  # Verifica o hash da senha
             # Salvar as informações do usuário na sessão
-            session['user_id'] = user['cod_usuario']  # ID do usuário (ajustado para o nome correto da coluna)
-            session['user_email'] = user['email']  # Email do usuário (ajustado para o nome correto da coluna)
+            session['user_id'] = user['cod_usuario']  
+            session['user_email'] = user['email']  
 
             # Redireciona para a página de perfil após login
             return redirect(url_for('perfil'))
@@ -87,7 +87,7 @@ def perfil():
         return redirect(url_for('login'))  # Redireciona para o login se o usuário não estiver logado
 
     # Aqui você deve passar o usuário para o template 'perfil.html'
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT * FROM usuario WHERE cod_usuario = %s", (session['user_id'],))
     user = cur.fetchone()
     cur.close()
@@ -97,10 +97,10 @@ def perfil():
 #LogOut
 @app.route('/logout')
 def logout():
-    # Remove informações da sessão para efetuar o logout
+
     session.pop('user_id', None)
     session.pop('user_email', None)
-    # Redireciona para a página de login após o logout
+
     return redirect(url_for('index'))
 
 #Atualizar dados do usuario
@@ -115,7 +115,6 @@ def update(id):
     if not usuario:
         return "Usuário não encontrado", 404
 
-    # Se o formulário for enviado via POST
     if request.method == 'POST':
         senha_atual = request.form['senha_atual']
         nome = request.form['nome']
@@ -126,15 +125,15 @@ def update(id):
         
         # Verifica se a senha atual fornecida corresponde ao hash da senha no banco
         if not check_password_hash(usuario['senha'], senha_atual):
-            flash("Senha atual incorreta", "error")  # Flash para mensagem de erro
+            flash("Senha atual incorreta", "error")  
             return render_template('usuarios/update.html', usuario=usuario)
         
         # Se a senha for correta, atualize os dados
         nova_senha = request.form['nova_senha']
-        if nova_senha:  # Verifica se uma nova senha foi fornecida
-            nova_senha_hash = generate_password_hash(nova_senha)  # Gera o hash da nova senha
+        if nova_senha:
+            nova_senha_hash = generate_password_hash(nova_senha)  
         else:
-            nova_senha_hash = usuario['senha']  # Se não for fornecida nova senha, mantém a antiga
+            nova_senha_hash = usuario['senha']  
 
         # Atualiza os dados no banco
         cur.execute("""
@@ -153,16 +152,36 @@ def update(id):
     cur.close()
     return render_template('usuarios/update.html', usuario=usuario)
 
-
 #Pesquisar usuarios
 @app.route('/usuarios/read', methods=['GET', 'POST'] )
 def read():
     return render_template('usuarios/read.html')
 
-#Deletar usuario
-@app.route('/usuarios/login', methods=['GET', 'POST'] )
-def delete_usuario():
-    return render_template('usuarios/delete.html')
+# Deletar Usuário
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
+def delete(id):
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT * FROM usuario WHERE cod_usuario = %s", (id,))
+    usuario = cur.fetchone()
+
+    if not usuario:
+        return "Usuário não encontrado", 404
+
+    if request.method == 'POST':
+        senha_atual = request.form['senha_atual']
+
+        if not check_password_hash(usuario['senha'], senha_atual):
+            flash("Senha atual incorreta", "error")
+            return render_template('usuarios/delete.html', usuario=usuario)
+
+        cur.execute("DELETE FROM usuario WHERE cod_usuario = %s", (id,))
+        mysql.connection.commit()
+        cur.close()
+
+        flash("Usuário deletado com sucesso", "success")
+        return redirect(url_for('index'))
+
+    return render_template('usuarios/delete.html', usuario=usuario)
 
 #Forum grupos
 @app.route('/grupos/forum', methods=['GET', 'POST'] )
